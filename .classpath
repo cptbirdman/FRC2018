@@ -10,5 +10,6 @@
 	<classpathentry kind="lib" path="C:/Users/FRC4454/wpilib/user/java/lib/navx_frc.jar"/>
 	<classpathentry kind="var" path="USERLIBS_DIR/CTRLib.jar"/>
 	<classpathentry kind="var" path="USERLIBS_DIR/navx_frc.jar"/>
+	<classpathentry kind="lib" path="build/jars/commons-math3-3.6.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

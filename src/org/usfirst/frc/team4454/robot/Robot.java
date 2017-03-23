@@ -488,12 +488,13 @@ public class Robot extends IterativeRobot {
 	public void autonomousPeriodic() {
 		switch (currentAutonStage) {
 		case 1: // Auton Shooting Mode
-			AutonShoot (shooterRPM, autonShootTime);
+			// AutonShoot (shooterRPM, autonShootTime);
+			AutonSideGear (0.35, 0.35, autonD1, autonTurnAngle, autonD2, 5.0);
 			break;
 		case 2: // Auton Drive Straight Mode
 			// AutonDriveStraight (0.4, autonDistance);
 			// Distance Parameters need to be recomputed
-			AutonSideGear (0.35, 0.35, autonD1, autonTurnAngle, autonD2, 5.0);
+			// AutonSideGear (0.35, 0.35, autonD1, autonTurnAngle, autonD2, 5.0);
 			break;
 		}
 		
@@ -507,7 +508,6 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putString ("currentAutonMode", currentAutonMode.toString());
 		
 		report();
-
 	}
 	
 	// Place gear on side peg, d1 first distance, d2 second distance, timeout before backup
@@ -563,11 +563,13 @@ public class Robot extends IterativeRobot {
 				currentAutonMode = AutonMode.STOP;
 			}
 			
-			if (elapsedTime() > 2.0) {
+			if (elapsedTime() > 0.5) {
 				resetDistanceAndYaw();
+				resetTimer();
 				currentAutonMode = AutonMode.BACK_UP;
 			}
 			break;
+			/***
 		case BACK_UP:
 			driveStraight(-1.0 * Math.abs(forward_power));
 			if (Math.abs(getEncoderDistance()) > 1.0) {
@@ -576,58 +578,36 @@ public class Robot extends IterativeRobot {
 				currentAutonMode = AutonMode.STOP;
 			}
 			break;
+			 ***/
+		case BACK_UP:
+			driveStraight(-1.0 * Math.abs(forward_power));
+			shooter.set(shooterRPM); // Warm up the shooter
+
+			if  ((d2 == 0.0) || (Math.abs(getEncoderDistance()) > Math.abs(d2)) || (elapsedTime() > timeout) ) {
+				driveStraight(0.0);
+				resetDistanceAndYaw();
+				resetTimer();
+				openServo(true);
+				currentAutonMode = AutonMode.SHOOT;
+			}
+			break;
+		case SHOOT:
+			if (elapsedTime() >= autonShootTime) {
+				currentAutonMode = AutonMode.STOP;
+				shooter.set(0);
+				openServo(false);
+			}
+			break;
 		default:
 			break;
 		}
 	}
-	
+
 	public double getEncoderDistance () {
 		// Factor of 0.9 to account for travel on carpet
 		return (0.9 * encRight.getDistance());
 	}
 
-	public void AutonCenterGear (double forward_power, double d2, double timeout) {
-		// START
-		// Go straight for d2 or until timeout
-		// Drop gear
-		// Wait for one second
-		// Backup 1 meter
-		// STOP
-		
-		switch (currentAutonMode) {
-		case START:
-			resetDistanceAndYaw();
-			currentAutonMode = AutonMode.MOVE_TO_GEAR;
-			break;
-		case MOVE_TO_GEAR:
-			driveStraight(Math.signum(d2) * Math.abs(forward_power));
-			// Note that we check the timeout to handle situations where you drive into the airship
-			if  ( (Math.abs(encRight.getDistance()) > Math.abs(d2)) || (elapsedTime() > timeout) ) {
-				driveStraight(0.0);
-				resetDistanceAndYaw();
-				resetTimer();
-				currentAutonMode = AutonMode.RELEASE_GEAR;
-			}
-			break;
-		case RELEASE_GEAR:
-			gearServo(true);
-			if (elapsedTime() > 1.0) {
-				resetDistanceAndYaw();
-				currentAutonMode = AutonMode.BACK_UP;
-			}
-			break;
-		case BACK_UP:
-			driveStraight(-1.0 * Math.abs(forward_power));
-			if (Math.abs(encRight.getDistance()) > 1.0) {
-				driveStraight(0.0);
-				resetDistanceAndYaw();
-				currentAutonMode = AutonMode.STOP;
-			}
-			break;
-		default:
-			break;
-		}
-	}
 
 	// Auto shooter to be invoked by pressing and holding a button, first squeeze resets state to start
 	public void AutoShooter () {
