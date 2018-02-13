@@ -14,9 +14,10 @@ import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Victor;
 
-import com.ctre.CANTalon;
-import com.ctre.CANTalon.FeedbackDevice;
-import com.ctre.CANTalon.TalonControlMode;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix.motorcontrol.FeedbackDevice;
+import com.ctre.phoenix.motorcontrol.NeutralMode;
+import com.ctre.phoenix.motorcontrol.ControlMode;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Encoder;
@@ -39,16 +40,16 @@ public class Robot extends IterativeRobot {
 	Joystick rightStick; // set to ID 2 in DriverStation
 	Joystick operatorStick;
 
-	CANTalon frontRight;
-	CANTalon frontLeft;
-	CANTalon backRight;
-	CANTalon backLeft;
-	CANTalon middleRight;
-	CANTalon middleLeft;
+	TalonSRX frontRight;
+	TalonSRX frontLeft;
+	TalonSRX backRight;
+	TalonSRX backLeft;
+	TalonSRX middleRight;
+	TalonSRX middleLeft;
 	
-	CANTalon shooter;
-	CANTalon climber;
-	CANTalon intake;
+	TalonSRX shooter;
+	TalonSRX climber;
+	TalonSRX intake;
 	
 	Servo intakeFeed;
 	Servo GearOne;
@@ -61,7 +62,6 @@ public class Robot extends IterativeRobot {
 	PowerDistributionPanel pdp;
 
 	DigitalInput GearSensor = new DigitalInput(0);
-
 
 	Encoder encLeft;
 	Encoder encRight;
@@ -139,13 +139,13 @@ public class Robot extends IterativeRobot {
 		// shooter CAN ID: 7
 		// intake CAN ID: 8
 		// climber CAN ID: 9
-		frontLeft   = new CANTalon(1);
-		middleLeft  = new CANTalon(2);
-		backLeft    = new CANTalon(3);
+		frontLeft   = new TalonSRX(1);
+		middleLeft  = new TalonSRX(2);
+		backLeft    = new TalonSRX(3);
 
-		frontRight  = new CANTalon(4);
-		middleRight = new CANTalon(5);
-		backRight   = new CANTalon(6);
+		frontRight  = new TalonSRX(4);
+		middleRight = new TalonSRX(5);
+		backRight   = new TalonSRX(6);
 
 		frontRight.setInverted(true);
 		backRight.setInverted(true);
@@ -156,35 +156,38 @@ public class Robot extends IterativeRobot {
 		rightStick = new Joystick(1);
 		operatorStick = new Joystick(2);
 
-		shooter = new CANTalon(7);
-		intake  = new CANTalon(8);
-		climber = new CANTalon(9);
+		shooter = new TalonSRX(7);
+		intake  = new TalonSRX(8);
+		climber = new TalonSRX(9);
 		
-		intakeFeed = new Servo(4);
+		intakeFeed = new Servo(0);
 		GearOne = new Servo(5);
 		GearTwo = new Servo(6);
 
-		shooter.setFeedbackDevice(FeedbackDevice.CtreMagEncoder_Relative);
+		shooter.configSelectedFeedbackSensor(FeedbackDevice.CTRE_MagEncoder_Relative, 0, 0);
 
-		shooter.reverseSensor(true);
-		shooter.reverseOutput(true);
+		shooter.setSensorPhase(true);
+		shooter.setInverted(true);
 
-		shooter.configNominalOutputVoltage(0.0f, -0.0f);
-		shooter.configPeakOutputVoltage(0.0f, -12.0f);
+		shooter.configNominalOutputForward(0.0, 0);
+		shooter.configNominalOutputReverse(0.0, 0);
+		shooter.configPeakOutputForward(0.0, 0);
+		shooter.configPeakOutputReverse(-1.0, 0);
 		
-		shooter.enableBrakeMode(false);
+		shooter.setNeutralMode(NeutralMode.Coast);
 
-		shooter.setProfile(0);
-		shooter.setF(F);
-		shooter.setP(P);
-		shooter.setI(I);
-		shooter.setD(D);
+		shooter.selectProfileSlot(0, 0);
+		shooter.config_kF(0, F, 0);
+		shooter.config_kP(0, P, 0);
+		shooter.config_kI(0, I, 0);
+		shooter.config_kD(0, D, 0);
 	//	shooter.SetVelocityMeasurementWindow(512);
-		shooter.changeControlMode(TalonControlMode.Speed);
 		
 		// only allow climber to go in one direction
-		climber.configNominalOutputVoltage(-0.0f, 0.0f);
-		climber.configPeakOutputVoltage(0.0f, 12.0f);
+		climber.configNominalOutputForward(0.0, 0);
+		climber.configNominalOutputReverse(0.0, 0);
+		climber.configPeakOutputForward(0.0, 0);
+		climber.configPeakOutputReverse(-1.0, 0);
 
 		pdp = new PowerDistributionPanel(); 
 
@@ -227,7 +230,7 @@ public class Robot extends IterativeRobot {
 		encLeft.setReverseDirection(false);
 		encLeft.setSamplesToAverage(7);
 
-		encRight = new Encoder(6, 7, false, CounterBase.EncodingType.k4X);
+		encRight = new Encoder(2, 3, false, CounterBase.EncodingType.k4X);
 		
 		encRight.setMaxPeriod(1);
 		encRight.setMinRate(0.1);
@@ -364,19 +367,20 @@ public class Robot extends IterativeRobot {
 		double scale = getDrivePowerScale();
 		adaptiveDrive(leftAxis * scale, rightAxis * scale);
 		
-		climber.set(operatorStick.getRawAxis(5)); // Right X of Joystick
+		climber.set(ControlMode.PercentOutput, operatorStick.getRawAxis(5)); // Right X of Joystick
 		
-		intake.set(operatorStick.getRawAxis(1)); // Left X of Joystick
+		intake.set(ControlMode.PercentOutput, operatorStick.getRawAxis(1)); // Left X of Joystick
 		
 		// shooter enable/disable
 		if (operatorStick.getRawAxis(3) > 0.15) {
-			shooter.set(shooterRPM);
+			shooter.set(ControlMode.Velocity, shooterRPM);
 		} else {
-			shooter.set(0);
+			shooter.set(ControlMode.PercentOutput, 0);
 		}
 		
 		// intake servo enable/disable
-		openServo(operatorStick.getRawAxis(2) > 0.15);
+		//openServo(operatorStick.getRawAxis(2) > 0.15);
+		openServo(operatorStick.getRawButton(4)); // Y button
 		
 		// gear mech servo enable/disable
 		gearServo(operatorStick.getRawButton(4)); // Y button
@@ -391,22 +395,22 @@ public class Robot extends IterativeRobot {
 		double newF = SmartDashboard.getNumber("F", F);
 		if(!compareDoubles(newF, F)) {
 			F = newF;
-			shooter.setF(F);
+			shooter.config_kF(0, F, 0);
 		}
 		double newP = SmartDashboard.getNumber("P", P);
 		if(newP != P) {
 			P = newP;
-			shooter.setP(P);
+			shooter.config_kP(0, P, 0);
 		}
 		double newI = SmartDashboard.getNumber("I", I);
 		if(!compareDoubles(newI, I)) {
 			I = newI;
-			shooter.setI(I);
+			shooter.config_kI(0, I, 0);
 		}
 		double newD = SmartDashboard.getNumber("D", D);
 		if(!compareDoubles(newD, D)) {
 			D = newD;
-			shooter.setD(D);
+			shooter.config_kD(0, D, 0);
 		}
 		
 		int exposureValueNew = (int) SmartDashboard.getNumber("Exposure", exposureValue);
@@ -488,11 +492,13 @@ public class Robot extends IterativeRobot {
 	public void autonomousPeriodic() {
 		switch (currentAutonStage) {
 		case 1: // Auton Shooting Mode
-			// AutonShoot (shooterRPM, autonShootTime);
-			AutonSideGear (0.35, 0.35, autonD1, autonTurnAngle, autonD2, 5.0);
+			AutonShoot (shooterRPM, autonShootTime);
+			//AutonSideGear (0.35, 0.35, autonD1, autonTurnAngle, autonD2, 5.0);
 			break;
 		case 2: // Auton Drive Straight Mode
-			// AutonDriveStraight (0.4, autonDistance);
+			AutonDriveBack (0.4, autonD1);
+			//AutonDriveStraight (0.4, autonD1);
+
 			// Distance Parameters need to be recomputed
 			// AutonSideGear (0.35, 0.35, autonD1, autonTurnAngle, autonD2, 5.0);
 			break;
@@ -581,7 +587,7 @@ public class Robot extends IterativeRobot {
 			 ***/
 		case BACK_UP:
 			driveStraight(-1.0 * Math.abs(forward_power));
-			shooter.set(shooterRPM); // Warm up the shooter
+			shooter.set(ControlMode.Velocity, shooterRPM); // Warm up the shooter
 
 			if  ((d2 == 0.0) || (Math.abs(getEncoderDistance()) > Math.abs(d2)) || (elapsedTime() > timeout) ) {
 				driveStraight(0.0);
@@ -594,7 +600,7 @@ public class Robot extends IterativeRobot {
 		case SHOOT:
 			if (elapsedTime() >= autonShootTime) {
 				currentAutonMode = AutonMode.STOP;
-				shooter.set(0);
+				shooter.set(ControlMode.PercentOutput, 0);
 				openServo(false);
 			}
 			break;
@@ -631,13 +637,15 @@ public class Robot extends IterativeRobot {
 		case START:
 			resetTimer();
 			currentAutonMode = AutonMode.DELAY;
-			shooter.set(RPM);
+			shooter.set(ControlMode.Velocity, RPM);
 			break;
 		case DELAY:
 			// Give the shooter a second to spin up
 			if (elapsedTime() >= 1.0) {		
-				shooter.configNominalOutputVoltage(0.0f, -0.0f);
-				shooter.configPeakOutputVoltage(0.0f, -12.0f);
+				shooter.configNominalOutputForward(0.0, 0);
+				shooter.configNominalOutputReverse(0.0, 0);
+				shooter.configPeakOutputForward(0.0, 0);
+				shooter.configPeakOutputReverse(-1.0, 0);
 				resetTimer();
 				currentAutonMode = AutonMode.SHOOT;
 				openServo(true);
@@ -646,7 +654,7 @@ public class Robot extends IterativeRobot {
 		case SHOOT:
 			if (elapsedTime() >= shootTime) {
 				currentAutonMode = AutonMode.STOP;
-				shooter.set(0);
+				shooter.set(ControlMode.PercentOutput, 0);
 				openServo(false);
 			}
 			break;
@@ -678,6 +686,29 @@ public class Robot extends IterativeRobot {
 			break;
 		}
 	}
+public void AutonDriveBack (double power, double distance) {
+		
+		if (distance == 0) {
+			currentAutonMode = AutonMode.STOP;
+			return;
+		}
+		
+		switch (currentAutonMode) {
+		case START: 
+			resetDistanceAndYaw(); 
+			currentAutonMode = AutonMode.DRIVE_STRAIGHT;
+			break;
+		case DRIVE_STRAIGHT :
+			driveStraight(-(Math.signum(distance) * Math.abs(power)));
+			if (Math.abs(getEncoderDistance()) > Math.abs(distance)) {
+				driveStraight(0.0);
+				currentAutonMode = AutonMode.STOP;
+			}
+			break;
+		default:
+			break;
+		}
+	}
 	
 	public void resetTimer () {
 		startTime = System.nanoTime();
@@ -698,13 +729,13 @@ public class Robot extends IterativeRobot {
 	// UTILITY METHODS
 
 	public void setDriveMotors(double l, double r) {
-		frontRight.set(r);
-		backRight.set(r);
-		middleRight.set(r);
+		frontRight.set(ControlMode.PercentOutput, r);
+		backRight.set(ControlMode.PercentOutput, r);
+		middleRight.set(ControlMode.PercentOutput, r);
 
-		frontLeft.set(l);
-		backLeft.set(l);
-		middleLeft.set(l);
+		frontLeft.set(ControlMode.PercentOutput, l);
+		backLeft.set(ControlMode.PercentOutput, l);
+		middleLeft.set(ControlMode.PercentOutput, l);
 	}
 	
 	int rpmButton = -1;
@@ -776,7 +807,7 @@ public class Robot extends IterativeRobot {
 
 	public void reportShooters() {
 		SmartDashboard.putNumber("shooterRPM", shooterRPM);
-		SmartDashboard.putNumber("shooterSpeed", shooter.getSpeed());
+		SmartDashboard.putNumber("shooterSpeed", shooter.getSelectedSensorVelocity(0));
 
 		/*
 		 * SmartDashboard.putNumber(" V", shooter.getOutputVoltage());
